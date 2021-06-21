@@ -21,10 +21,10 @@
             @click="queryGuset"
             :class="{ cwhShake: !isPhoneRight }"
           >
-            <transition name="iconAnimation">
+            <transition name="showAnimation">
               <i class="fas fa-search" v-show="isPhoneRight"></i>
             </transition>
-            <transition name="iconAnimation">
+            <transition name="showAnimation">
               <i class="fas fa-times" v-show="!isPhoneRight"></i>
             </transition>
           </div>
@@ -36,6 +36,24 @@
         <h3>查询结果</h3>
         <i class="fas fa-search"></i>
       </div>
+
+      <div class="sortIcon">
+        <transition name="showAnimation"
+          ><i
+            class="fas fa-sort-up sort-up"
+            @click="previousPage"
+            v-show="pageNum > 1 && whichScreen > 1"
+          ></i
+        ></transition>
+        <transition name="showAnimation"
+          ><i
+            class="fas fa-sort-down sort-down"
+            @click="nextPage"
+            v-show="pageNum > 1 && whichScreen >= 1 && whichScreen != pageNum"
+          ></i
+        ></transition>
+      </div>
+
       <div class="qRContent">
         <div class="queryList">
           <div class="bg-line"></div>
@@ -62,18 +80,19 @@
               <span v-show="singleIsShow">房间号：</span>{{ guestInfo.rno }}
             </p>
           </div>
-          <div class="AllQueryResult">
+
+          <div class="AllQueryResult" v-for="index2 in pageNum" :key="index2">
             <div
-              @click="selected(index)"
+              @click="selected(index, index2)"
               class="allResultItem"
-              v-for="(item, index) in allGuestInfo"
+              v-for="(item, index) in sortedGuestInfo[index2 - 1]"
               :key="index"
             >
-              {{ item.uname }}
+              {{ item.uname + "/" + item.phone }}
             </div>
           </div>
         </div>
-        <transition name="warnAnimation"
+        <transition name="showAnimation"
           ><div class="warnInfo" v-show="warnIsShow">
             <div class="qRHeader">
               <h3>提示信息</h3>
@@ -121,8 +140,11 @@ export default {
       singleIsShow: false,
       guestSex: "",
       allGuestInfo: [],
-      whichScrenn: 0,
+      sortedGuestInfo: [],
+      whichScreen: 0,
       selectedIndex: -1,
+      pageSize: 5,
+      pageNum: 1,
     };
   },
   mounted() {
@@ -140,12 +162,15 @@ export default {
   },
   methods: {
     checkOut() {
-      if (this.whichScrenn) {
+      if (this.whichScreen) {
         removeConsumer(
           this.allGuestInfo[this.selectedIndex].id,
           this.allGuestInfo[this.selectedIndex].rno
         );
         this.allGuestInfo.splice(this.selectedIndex, 1);
+        this.sortedGuestInfo[
+          Math.floor(this.selectedIndex / this.pageSize)
+        ].splice(this.selectedIndex % this.pageSize, 1);
       } else if (this.guestInfo.id) {
         removeConsumer(this.guestInfo.id, this.guestInfo.rno).then((result) => {
           console.log(result);
@@ -159,8 +184,9 @@ export default {
       this.guestSex = "";
     },
     queryGuset() {
+      this.whichScreen = 0;
       this.boardMove(false);
-      this.whichScrenn = 0;
+
       if (this.storePhone == this.queryPhone && this.storePhone != "") {
         return;
       }
@@ -180,63 +206,138 @@ export default {
       });
     },
     queryAllInfo() {
-      this.whichScrenn = 1;
+      this.whichScreen = 1;
       getAllGuestInfo().then((result) => {
         this.allGuestInfo = result;
+        let attr1 = this.allGuestInfo.length / this.pageSize;
+        let attr2 = this.allGuestInfo.length % this.pageSize == 0 ? 0 : 1;
+        this.pageNum = Math.floor(attr1) + attr2; //用于标志当前数组分割到第几块了
+        let count = 0;
+        for (let i = 0; i < this.allGuestInfo.length; i += this.pageSize) {
+          if (count < this.pageNum) {
+            this.sortedGuestInfo[count] = this.allGuestInfo.slice(
+              i,
+              i + this.pageSize
+            );
+            count++;
+          }
+        }
       });
       this.boardMove(true);
       //给查询全部的展示面板增加监听
       setTimeout(() => {
-        const allQueryResult = document.querySelector(".AllQueryResult");
+        const allQueryResults = document.querySelectorAll(".AllQueryResult");
         const radius = 64;
         const allResultItems = document.querySelectorAll(".allResultItem");
-        allQueryResult.onmousemove = (evt) => {
-          evt = evt || window.event;
-          for (var i = 0; i < allResultItems.length; i++) {
-            var rectInfo = allResultItems[i].getBoundingClientRect();
+        for (let i = 0; i < allQueryResults.length; i++) {
+          allQueryResults[i].onmousemove = (evt) => {
+            evt = evt || window.event;
+            for (var i = 0; i < allResultItems.length; i++) {
+              var rectInfo = allResultItems[i].getBoundingClientRect();
 
-            var a = rectInfo.x + rectInfo.width / 2 - evt.clientX;
-            var b = rectInfo.y + rectInfo.height / 2 - evt.clientY;
-            var c = Math.sqrt(a * a + b * b);
-            var ratio = 2 - c / radius;
-            if (c < radius) {
-              allResultItems[i].style.transform = "scale(" + ratio + ")";
+              var a = rectInfo.x + rectInfo.width / 2 - evt.clientX;
+              var b = rectInfo.y + rectInfo.height / 2 - evt.clientY;
+              var c = Math.sqrt(a * a + b * b);
+              var ratio = 2 - c / radius;
+              if (c < radius) {
+                allResultItems[i].style.transform = "scale(" + ratio + ")";
+              }
             }
-          }
-        };
+          };
+        }
+        this.initPage();
       }, 500);
+    },
+    initPage() {
+      const allQueryResults = document.querySelectorAll(".AllQueryResult");
+      for (let i = 1; i < allQueryResults.length; i++) {
+        allQueryResults[i].style.top = 150 + i * 100 + "%";
+      }
+      this.boardMove(true);
     },
     boardMove(flag) {
       const singleQueryResult = document.querySelector(".singleQueryResult");
-      const allQueryResult = document.querySelector(".AllQueryResult");
+      const allQueryResults = document.querySelectorAll(".AllQueryResult");
       if (flag) {
-        singleQueryResult.style.top = "-100%";
-        allQueryResult.style.top = "50%";
+        singleQueryResult.style.top = 50 - this.whichScreen * 100 + "%";
+        for (let i = 0; i < allQueryResults.length; i++) {
+          allQueryResults[i].style.top =
+            150 + i * 100 - 100 * this.whichScreen + "%";
+        }
       } else {
-        singleQueryResult.style.top = "50%";
-        allQueryResult.style.top = "150%";
+        singleQueryResult.style.top = 50 - this.whichScreen * 100 + "%";
+        for (let i = 0; i < allQueryResults.length; i++) {
+          allQueryResults[i].style.top =
+            150 + i * 100 - 100 * this.whichScreen + "%";
+        }
       }
     },
-    selected(index) {
+    selected(index, index2) {
       this.clickIsEnable = true;
-      this.selectedIndex = index;
+      this.selectedIndex = index + (index2 - 1) * this.pageSize;
+
       setTimeout(() => {
         const allResultItems = document.querySelectorAll(".allResultItem");
         for (let i = 0; i < allResultItems.length; i++) {
           allResultItems[i].classList.remove("selectActive");
         }
-        allResultItems[index].classList.add("selectActive");
+        allResultItems[this.selectedIndex].classList.add("selectActive");
       }, 200);
+    },
+    nextPage() {
+      if (this.pageNum == this.whichScreen) {
+        return;
+      }
+      this.whichScreen++;
+      this.boardMove(true);
+    },
+    previousPage() {
+      if (this.whichScreen == 1) {
+        return;
+      }
+      this.whichScreen--;
+      this.boardMove(false);
     },
   },
 };
 </script>
 <style scoped>
+.sortIcon {
+  position: absolute;
+  width: 32px;
+  height: 50px;
+  left: 52%;
+  top: 60%;
+  z-index: 9;
+}
+.sortIcon > i:nth-of-type(1) {
+  position: fixed;
+  top: 55%;
+}
+.sortIcon > i:nth-of-type(2) {
+  position: fixed;
+  top: 60%;
+}
+.sortIcon:hover {
+  cursor: pointer;
+}
+.sort-up,
+.sort-down {
+  font-size: 50px;
+  text-shadow: 0 2px 3px black;
+  color: #16a085;
+}
+.sort-up:hover {
+  color: #e74c3c;
+}
+.sort-down:hover {
+  color: #e74c3c;
+}
 .allResultItem {
-  width: 80px;
+  width: 170px;
   height: 30px;
-  margin-left: 50px;
   margin-top: 17px;
+  margin-left: 5px;
   background: #e74c3c;
   border-radius: 25px;
   line-height: 30px;
@@ -548,20 +649,12 @@ export default {
 .warn-checkBtn:nth-of-type(2):hover {
   background: #eb3b5a;
 }
-.warnAnimation-enter-active,
-.warnAnimation-leave-active {
+.showAnimation-enter-active,
+.showAnimation-leave-active {
   transition: 1s opacity;
 }
-.warnAnimation-enter,
-.warnAnimation-leave-to {
-  opacity: 0;
-}
-.iconAnimation-enter-active,
-.iconAnimation-leave-active {
-  transition: 1s opacity;
-}
-.iconAnimation-enter,
-.iconAnimation-leave-to {
+.showAnimation-enter,
+.showAnimation-leave-to {
   opacity: 0;
 }
 </style>
