@@ -1,7 +1,7 @@
 <template>
   <div class="login">
     <div class="wrap">
-      <div class="login-warn"><i class="fas fa-exclamation-triangle"></i></div>
+      <div class="login-warn"><i class="fas fa-exclamation-circle"></i></div>
       <ul>
         <li>
           <input type="text" placeholder="USERNAME" v-model="username" />
@@ -52,7 +52,9 @@ export default {
             warn_info.style.top = -warn_info.clientHeight + "px";
           }, 2000);
         } else {
-          this.$router.push("/home");
+          this.$router.push({
+            path: "/home/roomInfo/" + this.username,
+          });
         }
       });
     },
@@ -75,8 +77,8 @@ body {
   list-style: none;
 }
 .wrap {
-  height: 250px;
-  width: 333px;
+  height: 300px;
+  width: 400px;
   position: absolute;
   left: 50%;
   top: 50%;
@@ -94,7 +96,7 @@ body {
   padding-top: 10px;
 }
 .wrap > ul > li > input {
-  font-size: 14px;
+  font-size: 20px;
   border: none;
   box-sizing: border-box;
   padding: 5px;
@@ -105,7 +107,7 @@ body {
 }
 .wrap > ul > li > button {
   position: relative;
-  font-size: 16px;
+  font-size: 20px;
   border: 1px solid white;
   padding: 5px;
   margin-top: 10px;
@@ -132,8 +134,8 @@ span.pixal {
   position: absolute;
   left: -5px;
   top: -5px;
-  width: 3px;
-  height: 3px;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
   background: white;
 }
