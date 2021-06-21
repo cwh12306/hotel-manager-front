@@ -273,8 +273,12 @@ export default {
       }
     },
     selected(index, index2) {
+      let count = 0;
+      for (let i = 0; i < index2 - 1; i++) {
+        count += this.sortedGuestInfo[i].length;
+      }
       this.clickIsEnable = true;
-      this.selectedIndex = index + (index2 - 1) * this.pageSize;
+      this.selectedIndex = index + count;
 
       setTimeout(() => {
         const allResultItems = document.querySelectorAll(".allResultItem");
