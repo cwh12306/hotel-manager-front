@@ -1,3 +1,4 @@
+<!--页面导航-->
 <template>
   <div class="cwh-nav">
     <h1 class="cwh-title">酒店客房管理系统</h1>

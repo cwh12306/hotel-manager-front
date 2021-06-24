@@ -1,9 +1,13 @@
+<!--入住界面-->
 <template>
   <div class="room-register">
+    <!--上边的白线-->
     <div class="top-line"></div>
+    <!--叉叉取消按钮-->
     <div class="check-in-cancel" @click="checkInCancel">
       <i class="fas fa-times"></i>
     </div>
+    <!--注册表单-->
     <div class="register-form">
       <form
         action="http://localhost:8088/hm/addConsumer"
@@ -23,7 +27,9 @@
           placeholder="手机号"
           autocomplete="off"
           v-model="phone"
+          @blur="validate()"
         />
+        <div class="errorInfo">{{ errorList[0] }}</div>
         <input
           name="uid"
           type="text"
@@ -38,7 +44,7 @@
         </div>
         <span>客房号选择</span>
         <div class="cwh-select">
-          <select name="rno" id=""
+          <select name="rno" id="" v-model="selectedRno"
             ><option :value="rno" v-for="(rno, index) in rnos" :key="index">{{
               rno
             }}</option></select
@@ -58,11 +64,16 @@
         </div>
         <input name="payment" type="hidden" value="0" />
         <input name="price" type="hidden" :value="price" />
+        <input name="username" type="hidden" :value="username" />
         <input
           type="submit"
           value="入住"
-          :disabled="uid === '' || uname === '' || phone === ''"
-          :class="{ active: !(uid === '' || uname === '' || phone === '') }"
+          :disabled="
+            uid === '' || uname === '' || phone === '' || !submitEnable
+          "
+          :class="{
+            active: !(uid === '' || uname === '' || phone === ''),
+          }"
         />
       </form>
     </div>
@@ -70,12 +81,14 @@
 </template>
 
 <script>
+import { getGuestInfo } from "$network/query";
 export default {
   name: "RoomRegister",
   props: {
     roomIndex: {
       type: Number,
     },
+    /*数据是父组件拿到的，通过父与子组件通信拿到 */
     rnos: {
       type: Array,
       default() {
@@ -88,11 +101,36 @@ export default {
   },
   components: {},
   methods: {
+    /*取消注册，清除已填入的表单信息，并将取消消息发送至父组件，让其滚动 */
     checkInCancel() {
       this.$emit("cancelClick", this.roomIndex);
       this.uname = "";
       this.uid = "";
       this.phone = "";
+    },
+    /*验证 */
+    validate() {
+      this.errorList = [];
+      if (this.phone != "") {
+        let reg = /^(13[0-9]|14[01456879]|15[0-35-9]|16[2567]|17[0-8]|18[0-9]|19[0-35-9])\d{8}$/;
+        if (!reg.test(this.phone)) {
+          this.errorList.push("请输入有效的电话号码");
+        } else {
+          getGuestInfo(this.phone).then((result) => {
+            if (result) {
+              this.errorList.push("电话已被使用");
+            }
+          });
+        }
+      }
+      if (this.selectedRno == "") {
+        this.errorList.push("房间号为空");
+      }
+      setTimeout(() => {
+        if (this.errorList.length <= 0) {
+          this.submitEnable = true;
+        }
+      }, 200);
     },
   },
   data() {
@@ -100,6 +138,10 @@ export default {
       uname: "",
       uid: "",
       phone: "",
+      errorList: [],
+      submitEnable: false,
+      username: this.$route.params.username,
+      selectedRno: "",
     };
   },
 };

@@ -85,7 +85,9 @@
             <div
               @click="selected(index, index2)"
               class="allResultItem"
-              v-for="(item, index) in sortedGuestInfo[index2 - 1]"
+              v-for="(item, index) in allGuestInfo.length <= pageSize
+                ? allGuestInfo
+                : sortedGuestInfo[index2 - 1]"
               :key="index"
             >
               {{ item.uname + "/" + item.phone }}
@@ -211,14 +213,22 @@ export default {
         this.allGuestInfo = result;
         let attr1 = this.allGuestInfo.length / this.pageSize;
         let attr2 = this.allGuestInfo.length % this.pageSize == 0 ? 0 : 1;
-        this.pageNum = Math.floor(attr1) + attr2; //用于标志当前数组分割到第几块了
+        this.pageNum = Math.floor(attr1) + attr2;
+        //用于标志当前数组分割到第几块了
         let count = 0;
         for (let i = 0; i < this.allGuestInfo.length; i += this.pageSize) {
           if (count < this.pageNum) {
-            this.sortedGuestInfo[count] = this.allGuestInfo.slice(
-              i,
-              i + this.pageSize
-            );
+            if (this.allGuestInfo.length > this.pageSize) {
+              this.sortedGuestInfo[count] = this.allGuestInfo.slice(
+                i,
+                i + this.pageSize
+              );
+            } else {
+              this.sortedGuestInfo[count] = this.allGuestInfo.slice(
+                0,
+                this.allGuestInfo.length
+              );
+            }
             count++;
           }
         }
@@ -322,14 +332,12 @@ export default {
   position: fixed;
   top: 60%;
 }
-.sortIcon:hover {
-  cursor: pointer;
-}
 .sort-up,
 .sort-down {
   font-size: 50px;
   text-shadow: 0 2px 3px black;
   color: #16a085;
+  cursor: pointer;
 }
 .sort-up:hover {
   color: #e74c3c;
